@@ -3,7 +3,8 @@ package tgBot
 import (
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	log "github.com/sirupsen/logrus"
-	"github.com/vladkampov/url-shorterer-telegram-bot/helpers"
+	"github.com/vladkampov/url-shortener-telegram-bot/domain"
+	"github.com/vladkampov/url-shortener-telegram-bot/helpers"
 	"os"
 )
 
@@ -23,9 +24,9 @@ func handleUpdates(bot *tgbotapi.BotAPI, u tgbotapi.UpdateConfig) {
 
 		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 
-		log.Println(helpers.IsUrl(update.Message.Text))
+		shortenedURL := domain.SendUrl(update.Message.Text)
 
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, shortenedURL)
 		msg.ReplyToMessageID = update.Message.MessageID
 
 		_, err= bot.Send(msg)

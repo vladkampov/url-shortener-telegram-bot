@@ -2,19 +2,12 @@ package main
 
 import (
 	log "github.com/sirupsen/logrus"
-	"github.com/vladkampov/url-shorterer-telegram-bot/bot"
+	tgBot "github.com/vladkampov/url-shortener-telegram-bot/bot"
+	"github.com/vladkampov/url-shortener-telegram-bot/domain"
 )
 
 func main() {
 	log.Printf("We are about to go...")
-
+	domain.InitDomainGrpcSession()
 	tgBot.Init()
-
-	//port := os.Getenv("NOTIFIER_BOT_PORT")
-	//
-	//if len(port) == 0 {
-	//	port = "8080"
-	//}
-	//
-	//log.Printf("Service has started at http://localhost:%s", port)
 }
