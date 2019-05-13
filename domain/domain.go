@@ -2,9 +2,9 @@ package domain
 
 import (
 	"context"
+	log "github.com/sirupsen/logrus"
 	pb "github.com/vladkampov/url-shortener/service"
 	"google.golang.org/grpc"
-	"log"
 	"os"
 	"time"
 )
