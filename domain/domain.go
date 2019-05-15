@@ -6,25 +6,36 @@ import (
 	pb "github.com/vladkampov/url-shortener/service"
 	"google.golang.org/grpc"
 	"os"
+	"strconv"
 	"time"
 )
 
 var c pb.ShortenerClient
 
-func SendUrl(url string) string {
-	// Contact the server and print out its response.
+func GetUrls(userId int) (*pb.ArrayURLsReply, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	r, err := c.Shorten(ctx, &pb.URLRequest{Url: url})
+	urls, err := c.GetMyUrls(ctx, &pb.UserIdRequest{UserId: strconv.FormatInt(int64(userId), 10)})
 	if err != nil {
-		log.Fatalf("could not greet: %v", err)
+		return nil, err
 	}
-	log.Printf("URL was successfully shortened: %s", r.Url)
-	return r.Url
+	log.Printf("URLs was successfully executed for user: %d", userId)
+	return urls, nil
 }
 
-func InitDomainGrpcSession() pb.ShortenerClient {
-	domainServiceUrl := os.Getenv("SHORTENER_DOMAIN_PORT")
+func SendUrl(url string, userId int) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	r, err := c.Shorten(ctx, &pb.URLRequest{Url: url, UserId: strconv.FormatInt(int64(userId), 10) })
+	if err != nil {
+		return "", err
+	}
+	log.Printf("URL was successfully shortened: %s", r.Url)
+	return r.Url, nil
+}
+
+func RunDomainGrpcSession() (pb.ShortenerClient, error) {
+	domainServiceUrl := os.Getenv("SHORTENER_DOMAIN_URL")
 
 	if len(domainServiceUrl) == 0 {
 		domainServiceUrl = "localhost:50051"
@@ -33,9 +44,9 @@ func InitDomainGrpcSession() pb.ShortenerClient {
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(domainServiceUrl, grpc.WithInsecure())
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		return nil, err
 	}
 
 	c = pb.NewShortenerClient(conn)
-	return c
+	return c, nil
 }
