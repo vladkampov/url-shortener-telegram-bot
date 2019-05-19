@@ -7,6 +7,7 @@ import (
 	"github.com/vladkampov/url-shortener-telegram-bot/helpers"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func handleUpdates(bot *tgbotapi.BotAPI, u tgbotapi.UpdateConfig) {
@@ -16,6 +17,10 @@ func handleUpdates(bot *tgbotapi.BotAPI, u tgbotapi.UpdateConfig) {
 		log.Panic(err)
 	}
 
+	webUrl := os.Getenv("SHORTENER_WEB_DOMAIN")
+	if len(webUrl) == 0 {
+		webUrl = "kmpv.me"
+	}
 
 	for update := range updates {
 		if update.InlineQuery != nil {
@@ -42,8 +47,8 @@ func handleUpdates(bot *tgbotapi.BotAPI, u tgbotapi.UpdateConfig) {
 
 			inlineConfig := tgbotapi.InlineConfig{
 				InlineQueryID: update.InlineQuery.ID,
-				IsPersonal:    true,
-				CacheTime:     0,
+				IsPersonal: true,
+				CacheTime: 0,
 				Results: results,
 			}
 			_, err := bot.AnswerInlineQuery(inlineConfig)
@@ -65,15 +70,76 @@ func handleUpdates(bot *tgbotapi.BotAPI, u tgbotapi.UpdateConfig) {
 		var msg tgbotapi.MessageConfig
 		msg.ReplyToMessageID = update.Message.MessageID
 
+		user, err := domain.GetUser(update.Message.From.ID)
+		if err != nil {
+			log.Warnf("Can't get user object for user %s: %s", update.Message.From.UserName, err)
+			continue
+		}
+		if len(user.CustomDomain) != 0 {
+			webUrl = user.CustomDomain
+		}
+
 		if update.Message.IsCommand() {
 			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "")
 			switch update.Message.Command() {
+				//case "start":
+				//
+				// send custom domain proposal and help on start
+				// implement help
+				// TODO: have to decide the payments scheme – implement payments
+				case "domain":
+					//domain.SetCustomDomain(update.Message.From.ID, )
+
+					if len(update.Message.CommandArguments()) == 0 {
+						msg.Text = "You haven't provide any domain. Use \"/domain myshortdomain.com\" to set custom domain. Use /help for more details"
+						break
+					}
+
+					upperCasedCmdArgs := strings.ToUpper(update.Message.CommandArguments())
+					if upperCasedCmdArgs == "DELETE" || upperCasedCmdArgs == "REMOVE" {
+
+						user, err = domain.SetCustomDomain(update.Message.From.ID, "")
+						if err != nil {
+							log.Warnf("Can't remove custom domain for user %s: %s", update.Message.From.UserName, err)
+							msg.Text = "Currently can't remove custom domain for you. Try again in a bit!"
+							break
+						}
+
+						msg.Text = "Your custom domain were deleted from your profile. Enjoy!"
+						break
+					}
+
+					user, err = domain.SetCustomDomain(update.Message.From.ID, update.Message.CommandArguments())
+					if err != nil {
+						log.Warnf("Can't set custom domain for user %s: %s", update.Message.From.UserName, err)
+						msg.Text = "Currently can't set custom domain for you. Try again in a bit!"
+						break
+					}
+
+					webServerIpAddress := os.Getenv("SHORTENER_WEB_IP_ADDRESS")
+
+					msg.ParseMode = "html"
+					msg.Text = "Your custom domain successfully added: <b>" + user.CustomDomain + "</b>\n\n" +
+						"To finalize this setup please add <b>A</b> record to your domain with hostname (@ and www or any subdomain) and with value <b>" +
+						webServerIpAddress + "</b>\n"
+				case "user":
+					msg.ParseMode = "html"
+					customDomain := user.CustomDomain
+					if len(user.CustomDomain) == 0 {
+						customDomain = "You have no custom domain set. Use /domain to set it. Use /help for more info"
+					}
+
+					msg.Text = "<b>Here's your basic user info</b>:\n\n" +
+						// TODO: have to decide the payments scheme
+						//  "<b>Available tokens: </b>" + strconv.FormatInt(int64(user.Tokens), 10) +
+						"<b>Custom domain: </b>" + customDomain
 				case "urls":
 					urls, err := domain.GetUrls(update.Message.From.ID)
 
 					if err != nil {
 						log.Warnf("Can't get urls for user %s: %s", update.Message.From.UserName, err)
-						continue
+						msg.Text = "Currently can't get URL's for the user. Try again in a bit"
+						break
 					}
 
 					if len(urls.Urls) == 0 {
@@ -85,8 +151,7 @@ func handleUpdates(bot *tgbotapi.BotAPI, u tgbotapi.UpdateConfig) {
 					message := "<b>Here we go</b>:\n\n"
 
 					for _, url := range urls.Urls {
-						log.Println(url)
-						message = message + "🔗 kmpv.me/" + url.Hash + "\n- visited: <b>" +
+						message = message + "🔗 " + webUrl + "/" + url.Hash + "\n- visited: <b>" +
 							strconv.FormatInt(int64(url.Visited), 10) +
 							"</b> time(s) \n- <a href=\"" + url.Url + "\">link</a>\n\n"
 					}

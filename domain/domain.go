@@ -12,6 +12,30 @@ import (
 
 var c pb.ShortenerClient
 
+func SetCustomDomain(userId int, domain string) (*pb.UserObjectReply, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	user, err := c.SetCustomDomain(ctx, &pb.CustomDomainRequest{UserId: strconv.FormatInt(int64(userId), 10), CustomDomain: domain})
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("Updated custom domain for user %d: %s", userId, domain);
+	return user, nil
+}
+
+func GetUser(userId int) (*pb.UserObjectReply, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	user, err := c.GetUserInfo(ctx, &pb.UserIdRequest{UserId: strconv.FormatInt(int64(userId), 10)})
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("User info was successfully executed by id: %d", userId)
+	return user, nil
+}
+
 func GetUrls(userId int) (*pb.ArrayURLsReply, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
