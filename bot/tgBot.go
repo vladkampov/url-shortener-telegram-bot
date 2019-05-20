@@ -191,7 +191,8 @@ func handleUpdates(bot *tgbotapi.BotAPI, u tgbotapi.UpdateConfig) {
 }
 
 func Init() {
-	bot, err := tgbotapi.NewBotAPI(os.Getenv("SHORTENER_BOT_API_TOKEN"))
+	apiToken := strings.TrimSuffix(os.Getenv("SHORTENER_BOT_API_TOKEN"), "\n")
+	bot, err := tgbotapi.NewBotAPI(apiToken)
 
 	if err != nil {
 		log.Panic(err)
