@@ -5,6 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	pb "github.com/vladkampov/url-shortener/service"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 	"os"
 	"strconv"
 	"time"
@@ -66,7 +67,11 @@ func RunDomainGrpcSession() (pb.ShortenerClient, error) {
 	}
 
 	// Set up a connection to the server.
-	conn, err := grpc.Dial(domainServiceUrl, grpc.WithInsecure())
+	conn, err := grpc.Dial(
+		domainServiceUrl,
+		grpc.WithInsecure(),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{PermitWithoutStream: true, Time: 2 * time.Minute}),
+	)
 	if err != nil {
 		return nil, err
 	}
