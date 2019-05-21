@@ -82,14 +82,19 @@ func handleUpdates(bot *tgbotapi.BotAPI, u tgbotapi.UpdateConfig) {
 		if update.Message.IsCommand() {
 			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "")
 			switch update.Message.Command() {
-				//case "start":
-				//
-				// send custom domain proposal and help on start
-				// implement help
+				case "start":
+				case "help":
+					msg.ParseMode = "html"
+					msg.Text = "<b>Hey, I'm KMPV URL Shortener</b>\n\n" +
+						"Just drop the link including http:// or https:// in it and I'll return the short one.\n" +
+						"Notice that it works even in inline mode.\n\n" +
+						"<b>Wondering what commands I do?</b>\n" +
+ 						"- /urls - see the list of your shortened urls.\n" +
+						"- /domain customdomain.com – set your domain to work with shortener" +
+						"- /domain – remove custom domain" +
+						"- /user - see basic information for your user. Here you could verify that your custom domain set properly"
 				// TODO: have to decide the payments scheme – implement payments
 				case "domain":
-					//domain.SetCustomDomain(update.Message.From.ID, )
-
 					if len(update.Message.CommandArguments()) == 0 {
 						msg.Text = "You haven't provide any domain. Use \"/domain myshortdomain.com\" to set custom domain. Use /help for more details"
 						break
