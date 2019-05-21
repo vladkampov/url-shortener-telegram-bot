@@ -68,6 +68,7 @@ func RunDomainGrpcSession() (pb.ShortenerClient, error) {
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(domainServiceUrl, grpc.WithInsecure())
 	if err != nil {
+		log.Warnf("Can't connect to domain: %s", err)
 		return nil, err
 	}
 

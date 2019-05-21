@@ -7,6 +7,6 @@ require (
 	github.com/joho/godotenv v1.3.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
-	github.com/vladkampov/url-shortener v0.0.0-20190519173225-1acfc5aa2aea
+	github.com/vladkampov/url-shortener v0.0.0-20190521190344-6f82e1c4ac16
 	google.golang.org/grpc v1.20.1
 )

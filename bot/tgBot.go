@@ -70,34 +70,34 @@ func handleUpdates(bot *tgbotapi.BotAPI, u tgbotapi.UpdateConfig) {
 		var msg tgbotapi.MessageConfig
 		msg.ReplyToMessageID = update.Message.MessageID
 
-		user, err := domain.GetUser(update.Message.From.ID)
-		if err != nil {
-			log.Warnf("Can't get user object for user %s: %s", update.Message.From.UserName, err)
-			continue
-		}
-		if len(user.CustomDomain) != 0 {
-			webUrl = user.CustomDomain
-		}
-
 		if update.Message.IsCommand() {
 			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "")
 			switch update.Message.Command() {
-				case "start":
-				case "help":
+				case "start", "help":
 					msg.ParseMode = "html"
 					msg.Text = "<b>Hey, I'm KMPV URL Shortener</b>\n\n" +
 						"Just drop the link including http:// or https:// in it and I'll return the short one.\n" +
 						"Notice that it works even in inline mode.\n\n" +
 						"<b>Wondering what commands I do?</b>\n" +
  						"- /urls - see the list of your shortened urls.\n" +
-						"- /domain customdomain.com – set your domain to work with shortener" +
-						"- /domain – remove custom domain" +
+						"- /domain customdomain.com – set your domain to work with shortener\n" +
+						"- /domain delete – remove custom domain\n" +
 						"- /user - see basic information for your user. Here you could verify that your custom domain set properly"
 				// TODO: have to decide the payments scheme – implement payments
 				case "domain":
 					if len(update.Message.CommandArguments()) == 0 {
 						msg.Text = "You haven't provide any domain. Use \"/domain myshortdomain.com\" to set custom domain. Use /help for more details"
 						break
+					}
+
+					user, err := domain.GetUser(update.Message.From.ID)
+					if err != nil {
+						log.Warnf("Can't get user object for user %s: %s", update.Message.From.UserName, err)
+						msg.Text = "Currently can't remove custom domain for you. Try again in a bit!"
+						break
+					}
+					if len(user.CustomDomain) != 0 {
+						webUrl = user.CustomDomain
 					}
 
 					upperCasedCmdArgs := strings.ToUpper(update.Message.CommandArguments())
@@ -128,6 +128,15 @@ func handleUpdates(bot *tgbotapi.BotAPI, u tgbotapi.UpdateConfig) {
 						"To finalize this setup please add <b>A</b> record to your domain with hostname (@ and www or any subdomain) and with value <b>" +
 						webServerIpAddress + "</b>\n"
 				case "user":
+					user, err := domain.GetUser(update.Message.From.ID)
+					if err != nil {
+						log.Warnf("Can't get user object for user %s: %s", update.Message.From.UserName, err)
+						msg.Text = "Currently can't get user info for you. Try again in a bit!"
+						break
+					}
+					if len(user.CustomDomain) != 0 {
+						webUrl = user.CustomDomain
+					}
 					msg.ParseMode = "html"
 					customDomain := user.CustomDomain
 					if len(user.CustomDomain) == 0 {
@@ -175,7 +184,7 @@ func handleUpdates(bot *tgbotapi.BotAPI, u tgbotapi.UpdateConfig) {
 		}
 
 		if !helpers.IsUrl(update.Message.Text) {
-			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Seems like this is not a valid URL. Try again")
+			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Seems like this is not a valid URL. Remember URL has contain <b>http://</b> or <b>https://</b> in it. Try again now!")
 		} else {
 			shortenedURL, err := domain.SendUrl(update.Message.Text, update.Message.From.ID)
 
@@ -187,8 +196,8 @@ func handleUpdates(bot *tgbotapi.BotAPI, u tgbotapi.UpdateConfig) {
 			}
 		}
 
+		msg.ParseMode = "html"
 		_, err = bot.Send(msg)
-
 		if err != nil {
 			log.Warn(err)
 		}
