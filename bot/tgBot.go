@@ -44,7 +44,7 @@ func handleUpdates(bot *tgbotapi.BotAPI, u tgbotapi.UpdateConfig) {
 				CacheTime: 0,
 				Results: results,
 			}
-			_, err := bot.AnswerInlineQuery(inlineConfig)
+			_, err = bot.AnswerInlineQuery(inlineConfig)
 			if err != nil {
 				log.Println(err)
 				continue
