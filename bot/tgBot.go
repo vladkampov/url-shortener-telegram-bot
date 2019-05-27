@@ -4,7 +4,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	log "github.com/sirupsen/logrus"
 	"github.com/vladkampov/url-shortener-telegram-bot/domain"
-	"github.com/vladkampov/url-shortener-telegram-bot/helpers"
 	"os"
 	"strconv"
 	"strings"
@@ -25,24 +24,18 @@ func handleUpdates(bot *tgbotapi.BotAPI, u tgbotapi.UpdateConfig) {
 	for update := range updates {
 		if update.InlineQuery != nil {
 			var results []interface{}
-			query := update.InlineQuery.Query
 
-			var msg tgbotapi.InlineQueryResultArticle
-			if !helpers.IsUrl(query) {
-				msg = tgbotapi.NewInlineQueryResultArticleMarkdown(update.InlineQuery.ID, "Put the full url here", "Put the full URL here: it has to be with http:// or https://")
+			shortenedURL, err := domain.SendUrl(update.InlineQuery.Query, update.InlineQuery.From.ID)
+			var response string
+			if err != nil {
+				log.Warn(err)
+				response = "Uh Oh! Something went wrong. Try again later."
 			} else {
-				shortenedURL, err := domain.SendUrl(update.InlineQuery.Query, update.InlineQuery.From.ID)
-
-				var response string
-				if err != nil {
-					log.Warn(err)
-					response = "Uh Oh! Something went wrong. Try again later."
-				} else {
-					response = shortenedURL
-				}
-
-				msg = tgbotapi.NewInlineQueryResultArticleMarkdown(update.InlineQuery.ID, "Short it!", response)
+				response = shortenedURL
 			}
+
+			msg := tgbotapi.NewInlineQueryResultArticleMarkdown(update.InlineQuery.ID, "Short it!", response)
+
 			results = append(results, msg)
 
 			inlineConfig := tgbotapi.InlineConfig{
@@ -183,17 +176,12 @@ func handleUpdates(bot *tgbotapi.BotAPI, u tgbotapi.UpdateConfig) {
 			continue
 		}
 
-		if !helpers.IsUrl(update.Message.Text) {
-			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Seems like this is not a valid URL. Remember URL has contain <b>http://</b> or <b>https://</b> in it. Try again now!")
+		shortenedURL, err := domain.SendUrl(update.Message.Text, update.Message.From.ID)
+		if err != nil {
+			log.Warnf("Error sending message to domain: %s", err)
+			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Uh Oh! Something went wrong. Try again later.")
 		} else {
-			shortenedURL, err := domain.SendUrl(update.Message.Text, update.Message.From.ID)
-
-			if err != nil {
-				log.Warnf("Error sending message to domain: %s", err)
-				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Uh Oh! Something went wrong. Try again later.")
-			} else {
-				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Here's your minified URL: " + shortenedURL)
-			}
+			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Here's your minified URL: " + shortenedURL)
 		}
 
 		msg.ParseMode = "html"
